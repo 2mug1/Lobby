@@ -1,0 +1,19 @@
+sidebar:
+  title: "&a&lmc.iamtakagi.net"
+  lines:
+    - "&r{PING}ms"
+    - "&r総接続数: {TOTAL_CONNECTIONS}"
+    - "&7{DATE} {TIME}"
+  pattern:
+    date: yyyy/MM/dd
+    time: HH:mm:ss
+    world_date: yyyy/MM/dd
+    world_time: HH:mm
+servers:
+  - alpha:alpha:25567:0:0:0:0:0
+  - beta:beta:25568:0:0:0:0:0
+join:
+  messages:
+    - ""
+  title: ""
+  subtitle: ""
