@@ -178,9 +178,9 @@ public class Lobby extends JavaPlugin {
         buttons.put(index[0], new net.iamtakagi.medaka.Button(instance) {
           @Override
           public ItemStack getButtonItem(Player player) {
-            ItemBuilder b = new ItemBuilder(s.isOnline ? Material.GREEN_WOOL : Material.RED_WOOL)
+            ItemBuilder b = new ItemBuilder(s.isOnline() ? Material.GREEN_WOOL : Material.RED_WOOL)
                 .name(Style.WHITE + s.name);
-            if (s.isOnline) {
+            if (s.isOnline()) {
               b.lore(Style.GRAY + "接続数: " + s.onlinePlayers + "/" + s.maxPlayers);
             } else {
               b.lore(Style.RED + "このサーバーはオフラインです");
@@ -370,31 +370,7 @@ public class Lobby extends JavaPlugin {
       if (raw.contains("{PING}")) {
         raw = raw.replace("{PING}", "" + player.getPing());
       }
-
-      if (raw.contains("{X}")) {
-        raw = raw.replace("{X}", "" + player.getLocation().getBlockX());
-      }
-
-      if (raw.contains("{Y}")) {
-        raw = raw.replace("{Y}", "" + player.getLocation().getBlockY());
-      }
-
-      if (raw.contains("{Z}")) {
-        raw = raw.replace("{Z}", "" + player.getLocation().getBlockZ());
-      }
-
-      if (raw.contains("{DIRECTION}")) {
-        raw = raw.replace("{DIRECTION}", Utils.getDirectionByFace(player.getFacing()));
-      }
-
-      if (raw.contains("{WORLD}")) {
-        raw = raw.replace("{WORLD}", player.getWorld().getName());
-      }
-
-      if (raw.contains("{WEATHER}")) {
-        raw = raw.replace("{WEATHER}", Utils.getWorldWeather(player.getWorld()));
-      }
-
+    
       if (raw.contains("{TPS}")) {
         double[] recetTps = Utils.getRecentTps();
         double avgTps = (recetTps[0] + recetTps[1] + recetTps[2]) / 3;
@@ -478,6 +454,10 @@ public class Lobby extends JavaPlugin {
           e.printStackTrace();
         }
       }
+    }
+
+    public boolean isOnline () {
+      return this.isOnline;
     }
 
     private int getOnlinePlayers() {
@@ -603,50 +583,6 @@ public class Lobby extends JavaPlugin {
 }
 
 class Utils {
-  static String getDirectionByFace(BlockFace face) {
-    switch (face) {
-      case NORTH:
-        return "北";
-      case EAST:
-        return "東";
-      case SOUTH:
-        return "南";
-      case WEST:
-        return "西";
-      case UP:
-        return "上";
-      case DOWN:
-        return "下";
-      case NORTH_EAST:
-        return "北東";
-      case NORTH_WEST:
-        return "北西";
-      case SOUTH_EAST:
-        return "南東";
-      case SOUTH_WEST:
-        return "南西";
-      case WEST_NORTH_WEST:
-        return "西北西";
-      case NORTH_NORTH_WEST:
-        return "北北西";
-      case NORTH_NORTH_EAST:
-        return "北北東";
-      case EAST_NORTH_EAST:
-        return "東北東";
-      case EAST_SOUTH_EAST:
-        return "東南東";
-      case SOUTH_SOUTH_EAST:
-        return "南南東";
-      case SOUTH_SOUTH_WEST:
-        return "南南西";
-      case WEST_SOUTH_WEST:
-        return "西南西";
-      case SELF:
-        return "自分";
-      default:
-        return "不明";
-    }
-  }
 
   static double[] getRecentTps() {
     double[] recentTps = null;
@@ -657,17 +593,6 @@ class Utils {
       e.printStackTrace();
     }
     return recentTps;
-  }
-
-  public static String getWorldWeather(World world) {
-    if (world.isClearWeather()) {
-      return "晴れ";
-    } else if (world.isThundering() && !world.isClearWeather()) {
-      return "雷雨";
-    } else if (!world.isClearWeather() && !world.isThundering()) {
-      return "雨";
-    }
-    return "不明";
   }
 
   public static void connectToServer(Player player, String serverName) {
@@ -735,7 +660,7 @@ class ServerNPC {
     if (server == null)
       return;
 
-    if (server.isOnline) {
+    if (server.isOnline()) {
       DHAPI.insertHologramLine(hologram, 1, Style.WHITE + "接続数: " + server.onlinePlayers + "/" + server.maxPlayers);
     } else {
       DHAPI.insertHologramLine(hologram, 1, Style.RED + "オフライン");
