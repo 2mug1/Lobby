@@ -181,7 +181,7 @@ public class Lobby extends JavaPlugin {
                 .name(Style.WHITE + s.name);
             if (s.isOnline()) {
               b.lore(
-                ChatColor.translateAlternateColorCodes('§', s.description), 
+                s.description, 
                 Style.GRAY + "接続数: " + s.onlinePlayers + "/" + s.maxPlayers
               );
             } else {
