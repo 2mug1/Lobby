@@ -11,10 +11,6 @@ import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.World;
-import org.bukkit.block.Block;
-import org.bukkit.block.BlockFace;
-import org.bukkit.block.ShulkerBox;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
@@ -48,10 +44,10 @@ import com.github.iamtakagi.lobby.Lobby.LobbyConfig.JoinSettings;
 import com.google.common.io.ByteArrayDataOutput;
 import com.google.common.io.ByteStreams;
 
-import eu.decentsoftware.holograms.api.DHAPI;
-import eu.decentsoftware.holograms.api.holograms.Hologram;
 import net.citizensnpcs.api.CitizensAPI;
+import net.citizensnpcs.api.event.CitizensEnableEvent;
 import net.citizensnpcs.api.event.NPCClickEvent;
+import net.citizensnpcs.api.event.NPCRightClickEvent;
 import net.citizensnpcs.api.npc.NPC;
 import net.iamtakagi.iroha.ItemBuilder;
 import net.iamtakagi.iroha.Style;
@@ -88,11 +84,10 @@ public class Lobby extends JavaPlugin {
     this.getServer().getPluginManager().registerEvents(new GeneralListener(), this);
     this.getServer().getPluginManager().registerEvents(new SidebarListener(), this);
     this.getServer().getPluginManager().registerEvents(new DoubleJumpListener(), this);
-    this.getServer().getPluginManager().registerEvents(new ServerNPCListener(), this);
     this.serverManager = new ServerManager();
     this.serverManager.init();
-    // this.serverNPCManager = new ServerNPCManager();
-    // this.serverManager.init();
+    this.serverNPCManager = new ServerNPCManager();
+    this.serverNPCManager.init();
     Medaka.init(this);
     Bukkit.getMessenger().registerOutgoingPluginChannel(this, "BungeeCord");
   }
@@ -181,9 +176,8 @@ public class Lobby extends JavaPlugin {
                 .name(Style.WHITE + s.name);
             if (s.isOnline()) {
               b.lore(
-                s.description, 
-                Style.GRAY + "接続数: " + s.onlinePlayers + "/" + s.maxPlayers
-              );
+                  s.description,
+                  Style.GRAY + "接続数: " + s.onlinePlayers + "/" + s.maxPlayers);
             } else {
               b.lore(Style.RED + "このサーバーはオフラインです");
             }
@@ -616,19 +610,40 @@ class ServerNPCManager {
   }
 
   public void init() {
-    Lobby.getInstance().getLobbyConfig().getServers().forEach(s -> {
-      String[] data = s.split(":");
-      ServerNPC npc = new ServerNPC(data[0], new Location(Bukkit.getWorld("world"), Double.valueOf(data[3]),
-          Double.valueOf(data[4]), Double.valueOf(data[5]), Float.valueOf(data[6]), Float.valueOf(data[7])));
-      npc.init();
-      npcs.add(npc);
-    });
-    Lobby.getInstance().getServer().getScheduler().runTaskTimerAsynchronously(Lobby.getInstance(), new Runnable() {
-      @Override
-      public void run() {
-        npcs.forEach(npc -> npc.update());
+    CitizensAPI.getNPCRegistry().deregisterAll();
+    CitizensAPI.getNPCRegistry().saveToStore();
+
+    Bukkit.getServer().getPluginManager().registerEvents(new Listener() {
+      @EventHandler
+      public void onCitizensEnable(CitizensEnableEvent ev) {
+        Lobby.getInstance().getLobbyConfig().getServers().forEach(s -> {
+          String[] data = s.split(":");
+          Location location = new Location(Bukkit.getWorld("world"), Double.valueOf(data[3]),
+              Double.valueOf(data[4]), Double.valueOf(data[5]), Float.valueOf(data[6]), Float.valueOf(data[7]));
+          ServerNPC npc = new ServerNPC(data[0], location);
+          System.out.println("NPC Location: " + location.toString());
+          npc.init();
+          npcs.add(npc);
+        });
+        Lobby.getInstance().getServer().getScheduler().runTaskTimer(Lobby.getInstance(), new Runnable() {
+          @Override
+          public void run() {
+            npcs.forEach(npc -> npc.update());
+          }
+        }, 0, 100);
+
+        Bukkit.getServer().getPluginManager().registerEvents(new Listener() {
+          @EventHandler
+          public void onClick(NPCRightClickEvent event) {
+            Lobby.getInstance().getServerNPCManager().getNPCs().forEach(npc -> {
+              if (event.getNPC().equals(npc.getNPC())) {
+                Utils.connectToServer(event.getClicker(), npc.getServerName());
+              }
+            });
+          }
+        }, Lobby.getInstance());
       }
-    }, 0, 100);
+    }, Lobby.getInstance());
   }
 
   public List<ServerNPC> getNPCs() {
@@ -639,8 +654,7 @@ class ServerNPCManager {
 class ServerNPC {
   private String serverName;
   private Location location;
-  private NPC npcEntity;
-  private Hologram hologram;
+  private NPC npc;
 
   public ServerNPC(String serverName, Location location) {
     this.location = location;
@@ -648,45 +662,28 @@ class ServerNPC {
   }
 
   public void init() {
-    this.npcEntity = CitizensAPI.getNPCRegistry().createNPC(EntityType.PLAYER, "UZUMAKI_8021");
-    this.npcEntity.spawn(location);
-    this.hologram = DHAPI.createHologram("", location.add(0, 2.5, 0));
+    this.npc = CitizensAPI.getNPCRegistry().createNPC(EntityType.PANDA, "");
+    this.npc.spawn(location);
   }
 
   public void update() {
-    DHAPI.removeHologramLine(hologram, 0);
-    DHAPI.removeHologramLine(hologram, 1);
-
-    DHAPI.insertHologramLine(hologram, 0, Style.AQUA + serverName);
-
     MinecraftServer server = Lobby.getInstance().getServerManager().getServers().get(serverName);
 
     if (server == null)
       return;
 
     if (server.isOnline()) {
-      DHAPI.insertHologramLine(hologram, 1, Style.WHITE + "接続数: " + server.onlinePlayers + "/" + server.maxPlayers);
+      npc.setName(Style.GREEN + serverName + Style.GRAY + " (" + server.onlinePlayers + "/" + server.maxPlayers + ")");
     } else {
-      DHAPI.insertHologramLine(hologram, 1, Style.RED + "オフライン");
+      npc.setName(Style.RED + "このサーバーはオフラインです");
     }
   }
 
-  public NPC getNPCEntity() {
-    return this.npcEntity;
+  public NPC getNPC() {
+    return this.npc;
   }
 
   public String getServerName() {
     return this.serverName;
-  }
-}
-
-class ServerNPCListener implements Listener {
-  @EventHandler
-  public void onClick(NPCClickEvent event) {
-    Lobby.getInstance().getServerNPCManager().getNPCs().forEach(npc -> {
-      if (event.getNPC().getUniqueId().equals(npc.getNPCEntity().getUniqueId())) {
-        Utils.connectToServer(event.getClicker(), npc.getServerName());
-      }
-    });
   }
 }
