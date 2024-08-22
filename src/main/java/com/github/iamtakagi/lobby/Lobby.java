@@ -142,7 +142,7 @@ public class Lobby extends JavaPlugin {
     public void init() {
       Lobby.getInstance().getLobbyConfig().getServers().forEach(s -> {
         String[] data = s.split(":");
-        servers.put(data[0], new MinecraftServer(data[0], data[1], Integer.parseInt(data[2])));
+        servers.put(data[0], new MinecraftServer(data[0], data[1], Integer.parseInt(data[2]), data[8]));
       });
       Lobby.getInstance().getServer().getScheduler().runTaskTimerAsynchronously(Lobby.getInstance(), new Runnable() {
         @Override
@@ -166,6 +166,7 @@ public class Lobby extends JavaPlugin {
 
     public ServerMenu(Plugin instance) {
       super(instance);
+      this.setAutoUpdate(true);
     }
 
     @Override
@@ -179,7 +180,10 @@ public class Lobby extends JavaPlugin {
             ItemBuilder b = new ItemBuilder(s.isOnline() ? Material.GREEN_WOOL : Material.RED_WOOL)
                 .name(Style.WHITE + s.name);
             if (s.isOnline()) {
-              b.lore(Style.GRAY + "接続数: " + s.onlinePlayers + "/" + s.maxPlayers);
+              b.lore(
+                ChatColor.translateAlternateColorCodes('§', s.description), 
+                Style.GRAY + "接続数: " + s.onlinePlayers + "/" + s.maxPlayers
+              );
             } else {
               b.lore(Style.RED + "このサーバーはオフラインです");
             }
@@ -368,7 +372,7 @@ public class Lobby extends JavaPlugin {
       if (raw.contains("{PING}")) {
         raw = raw.replace("{PING}", "" + player.getPing());
       }
-    
+
       if (raw.contains("{TPS}")) {
         double[] recetTps = Utils.getRecentTps();
         double avgTps = (recetTps[0] + recetTps[1] + recetTps[2]) / 3;
@@ -408,15 +412,17 @@ public class Lobby extends JavaPlugin {
     String name;
     String address;
     int port;
+    String description;
     String motd;
     int onlinePlayers;
     int maxPlayers;
     boolean isOnline;
 
-    public MinecraftServer(String name, String address, int port) {
+    public MinecraftServer(String name, String address, int port, String description) {
       this.name = name;
       this.address = address;
       this.port = port;
+      this.description = description;
     }
 
     public void update() {
@@ -454,7 +460,7 @@ public class Lobby extends JavaPlugin {
       }
     }
 
-    public boolean isOnline () {
+    public boolean isOnline() {
       return this.isOnline;
     }
 

@@ -10,8 +10,8 @@ sidebar:
     world_date: yyyy/MM/dd
     world_time: HH:mm
 servers:
-  - alpha:alpha:25567:0:0:0:0:0
-  - beta:beta:25568:0:0:0:0:0
+  - alpha:alpha:25567:0:0:0:0:0:&aTest
+  - beta:beta:25568:0:0:0:0:0:&aTest
 join:
   messages:
     - ""
