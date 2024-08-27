@@ -96,6 +96,8 @@ public class Lobby extends JavaPlugin {
   public void onDisable() {
     this.saveDefaultConfig();
     scoreboard.close();
+    CitizensAPI.getNPCRegistry().deregisterAll();
+    CitizensAPI.getNPCRegistry().saveToStore();
   }
 
   public static Lobby getInstance() {
@@ -112,6 +114,10 @@ public class Lobby extends JavaPlugin {
 
   public ServerNPCManager getServerNPCManager() {
     return serverNPCManager;
+  }
+
+  public Map<UUID, LobbySidebar> getLobbySidebars() {
+    return this.sidebars;
   }
 
   private void loadConfig() {
@@ -196,7 +202,7 @@ public class Lobby extends JavaPlugin {
 
     @Override
     public String getTitle(Player player) {
-      return "サーバー選択";
+      return "クリックしてサーバーを選択";
     }
 
   }
@@ -228,12 +234,11 @@ public class Lobby extends JavaPlugin {
 
     @EventHandler
     public void onInteract(PlayerInteractEvent event) {
-      if (event.getItem() == null || event.getItem().getType() == Material.AIR)
+      if (event.getItem() == null || event.getItem().getType() == Material.AIR) {
         return;
-      if (event.getAction() == Action.RIGHT_CLICK_BLOCK || event.getAction() == Action.RIGHT_CLICK_AIR) {
-        if (event.getItem().equals(Items.SERVER_SELECTOR)) {
-          new ServerMenu(Lobby.getInstance()).openMenu(event.getPlayer());
-        }
+      }
+      if (event.getItem().equals(Items.SERVER_SELECTOR)) {
+        new ServerMenu(Lobby.getInstance()).openMenu(event.getPlayer());
       }
     }
 
@@ -468,12 +473,14 @@ public class Lobby extends JavaPlugin {
     public void onJoin(PlayerJoinEvent event) {
       LobbySidebar sidebar = new LobbySidebar(event.getPlayer());
       sidebar.setup();
-      sidebars.put(event.getPlayer().getUniqueId(), sidebar);
+      Lobby.getInstance().getLobbySidebars().put(event.getPlayer().getUniqueId(), sidebar);
     }
 
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
-      sidebars.remove(event.getPlayer().getUniqueId());
+      if (Lobby.getInstance().getLobbySidebars().containsKey(event.getPlayer().getUniqueId())) {
+        Lobby.getInstance().getLobbySidebars().remove(event.getPlayer().getUniqueId());
+      }
     }
   }
 
@@ -634,7 +641,7 @@ class ServerNPCManager {
 
         Bukkit.getServer().getPluginManager().registerEvents(new Listener() {
           @EventHandler
-          public void onClick(NPCRightClickEvent event) {
+          public void onClick(NPCClickEvent event) {
             Lobby.getInstance().getServerNPCManager().getNPCs().forEach(npc -> {
               if (event.getNPC().equals(npc.getNPC())) {
                 Utils.connectToServer(event.getClicker(), npc.getServerName());
