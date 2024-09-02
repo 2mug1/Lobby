@@ -2,7 +2,7 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>com.github.iamtakagi</groupId>
+  <groupId>net.iamtakagi.uzsk</groupId>
   <artifactId>Lobby</artifactId>
   <version>1.0.0</version>
   <packaging>jar</packaging>
@@ -153,6 +153,13 @@
       <version>2.0.35-SNAPSHOT</version>
       <scope>system</scope>
       <systemPath>${project.basedir}/lib/Citizens-2.0.35-b3506.jar</systemPath>
+    </dependency>
+    <dependency>
+      <groupId>net.iamtakagi.uzsk</groupId>
+      <artifactId>Core</artifactId>
+      <version>1.0.0</version>
+      <scope>system</scope>
+      <systemPath>${project.basedir}/lib/Core-1.0.0.jar</systemPath>
     </dependency>
   </dependencies>
 
