@@ -641,7 +641,7 @@ class ServerNPCManager {
 
         Bukkit.getServer().getPluginManager().registerEvents(new Listener() {
           @EventHandler
-          public void onClick(NPCClickEvent event) {
+          public void onClick(NPCRightClickEvent event) {
             Lobby.getInstance().getServerNPCManager().getNPCs().forEach(npc -> {
               if (event.getNPC().equals(npc.getNPC())) {
                 Utils.connectToServer(event.getClicker(), npc.getServerName());
