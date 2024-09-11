@@ -48,6 +48,7 @@ import net.citizensnpcs.api.event.CitizensEnableEvent;
 import net.citizensnpcs.api.event.NPCClickEvent;
 import net.citizensnpcs.api.event.NPCRightClickEvent;
 import net.citizensnpcs.api.npc.NPC;
+import net.citizensnpcs.trait.SkinTrait;
 import net.iamtakagi.iroha.ItemBuilder;
 import net.iamtakagi.iroha.Style;
 import net.iamtakagi.medaka.Button;
@@ -103,6 +104,12 @@ public class Lobby extends JavaPlugin {
     this.serverNPCManager.init();
     Medaka.init(this);
     Bukkit.getMessenger().registerOutgoingPluginChannel(this, "BungeeCord");
+
+    Bukkit.getOnlinePlayers().forEach(p -> {
+      LobbySidebar sidebar = new LobbySidebar(p);
+      sidebar.init();
+      sidebars.put(p.getUniqueId(), sidebar);
+    });
   }
 
   @Override
@@ -150,7 +157,7 @@ public class Lobby extends JavaPlugin {
     private Map<String, MinecraftServer> servers;
 
     public ServerManager() {
-      this.servers = new HashMap<>();
+      this.servers = new LinkedHashMap<>();
     }
 
     public void init() {
@@ -370,13 +377,23 @@ public class Lobby extends JavaPlugin {
       this.player = player;
     }
 
-    public void setup() {
+    public void init() {
       this.sidebar = scoreboard.createSidebar();
       this.sidebar.addPlayer(player);
       this.tickTask = Bukkit.getScheduler().runTaskTimer(instance, this::tick, 0, 20);
     }
 
+    public void destroy() {
+      this.sidebar.removePlayer(player);
+      this.tickTask.cancel();
+    }
+
     private void tick() {
+      if (!player.isOnline()) {
+        destroy();
+        sidebars.remove(player.getUniqueId());
+        return;
+      }
       SidebarComponent.Builder builder = SidebarComponent.builder();
       SidebarComponent title = SidebarComponent.staticLine(
           Component.text(ChatColor.translateAlternateColorCodes('&', config.getSidebarSettings().getTitle())));
@@ -498,13 +515,14 @@ public class Lobby extends JavaPlugin {
     @EventHandler
     public void onJoin(PlayerJoinEvent event) {
       LobbySidebar sidebar = new LobbySidebar(event.getPlayer());
-      sidebar.setup();
+      sidebar.init();
       Lobby.getInstance().getLobbySidebars().put(event.getPlayer().getUniqueId(), sidebar);
     }
 
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
       if (Lobby.getInstance().getLobbySidebars().containsKey(event.getPlayer().getUniqueId())) {
+        Lobby.getInstance().getLobbySidebars().get(event.getPlayer().getUniqueId()).destroy();
         Lobby.getInstance().getLobbySidebars().remove(event.getPlayer().getUniqueId());
       }
     }
@@ -653,7 +671,7 @@ class ServerNPCManager {
           String[] data = s.split(":");
           Location location = new Location(Bukkit.getWorld("world"), Double.valueOf(data[3]),
               Double.valueOf(data[4]), Double.valueOf(data[5]), Float.valueOf(data[6]), Float.valueOf(data[7]));
-          ServerNPC npc = new ServerNPC(data[0], location);
+          ServerNPC npc = new ServerNPC(data[0], location, data[9]);
           System.out.println("NPC Location: " + location.toString());
           npc.init();
           npcs.add(npc);
@@ -688,14 +706,17 @@ class ServerNPC {
   private String serverName;
   private Location location;
   private NPC npc;
+  private String skinName;
 
-  public ServerNPC(String serverName, Location location) {
+  public ServerNPC(String serverName, Location location, String skinName) {
     this.location = location;
     this.serverName = serverName;
+    this.skinName = skinName;
   }
 
   public void init() {
-    this.npc = CitizensAPI.getNPCRegistry().createNPC(EntityType.PANDA, "");
+    this.npc = CitizensAPI.getNPCRegistry().createNPC(EntityType.PLAYER, "");
+    this.npc.getOrAddTrait(SkinTrait.class).setSkinName(this.skinName);
     this.npc.spawn(location);
   }
 
@@ -708,7 +729,7 @@ class ServerNPC {
     if (server.isOnline()) {
       npc.setName(Style.GREEN + serverName + Style.GRAY + " (" + server.onlinePlayers + "/" + server.maxPlayers + ")");
     } else {
-      npc.setName(Style.RED + "このサーバーはオフラインです");
+      npc.setName(Style.RED + "サーバー" + serverName + "は現在オフラインです");
     }
   }
 
